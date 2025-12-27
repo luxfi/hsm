@@ -291,18 +291,15 @@ func (p *AzureKVProvider) GetPassword(ctx context.Context, keyID string) (string
 
 // EnvProvider reads a password directly from an environment variable.
 type EnvProvider struct {
-	EnvVar string // defaults to "LUX_MPC_PASSWORD"
+	EnvVar string // defaults to "MPC_PASSWORD"
 }
 
 func (p *EnvProvider) GetPassword(_ context.Context, _ string) (string, error) {
 	envVar := p.EnvVar
 	if envVar == "" {
-		envVar = "LUX_MPC_PASSWORD"
+		envVar = "MPC_PASSWORD"
 	}
 	password := os.Getenv(envVar)
-	if password == "" {
-		password = os.Getenv("ZAPDB_PASSWORD")
-	}
 	if password == "" {
 		return "", fmt.Errorf("hsm/env: environment variable %s is not set", envVar)
 	}

@@ -30,7 +30,7 @@ type Signer interface {
 //   - AWSKMSProvider  (KMS Decrypt on ZAPDB_ENCRYPTED_PASSWORD)
 //   - GCPKMSProvider  (Cloud KMS Decrypt on ZAPDB_ENCRYPTED_PASSWORD)
 //   - AzureKVProvider (Key Vault unwrapKey on ZAPDB_ENCRYPTED_PASSWORD)
-//   - EnvProvider     (reads LUX_MPC_PASSWORD or ZAPDB_PASSWORD env var)
+//   - EnvProvider     (reads MPC_PASSWORD env var)
 //   - FileProvider    (reads from a file, e.g. K8s mounted secret)
 type PasswordProvider interface {
 	// GetPassword returns the plaintext password identified by keyID.
