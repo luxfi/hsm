@@ -9,6 +9,8 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"crypto/sha256"
+	"io"
+	"golang.org/x/crypto/hkdf"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -107,8 +109,16 @@ func (v *KeyShareVault) deriveKey(ctx context.Context) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("hsm: vault key derivation failed: %w", err)
 	}
-	key := sha256.Sum256([]byte(pw))
-	return key[:], nil
+	// HKDF-SHA256 with salt for proper key derivation.
+	// Salt is fixed per vault instance (derived from passKey) to ensure deterministic keys.
+	// This replaces bare SHA-256 which had no salt and no domain separation.
+	salt := sha256.Sum256([]byte("hsm-vault-" + v.passKey))
+	hkdf := hkdf.New(sha256.New, []byte(pw), salt[:], []byte("hsm-key-share-vault-v1"))
+	key := make([]byte, 32)
+	if _, err := io.ReadFull(hkdf, key); err != nil {
+		return nil, fmt.Errorf("hsm: HKDF key derivation failed: %w", err)
+	}
+	return key, nil
 }
 
 // Store encrypts and stores key share bytes with metadata.
