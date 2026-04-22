@@ -90,7 +90,7 @@ func NewPasswordProvider(providerType string, config map[string]string) (Passwor
 	case "env":
 		envVar := get("env_var", "")
 		if envVar == "" {
-			envVar = "LUX_MPC_PASSWORD"
+			envVar = "MPC_PASSWORD"
 		}
 		return &EnvProvider{EnvVar: envVar}, nil
 

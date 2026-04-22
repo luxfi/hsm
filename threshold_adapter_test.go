@@ -76,8 +76,8 @@ func (m *mockThresholdSigner) SignShare(_ context.Context, message []byte, _ []i
 // helper to set env for vault tests
 func setVaultEnv(t *testing.T, pw string) {
 	t.Helper()
-	os.Setenv("LUX_MPC_PASSWORD", pw)
-	t.Cleanup(func() { os.Unsetenv("LUX_MPC_PASSWORD") })
+	os.Setenv("MPC_PASSWORD", pw)
+	t.Cleanup(func() { os.Unsetenv("MPC_PASSWORD") })
 }
 
 // ---------------------------------------------------------------------------
@@ -146,7 +146,7 @@ func TestKeyShareVaultNotFound(t *testing.T) {
 }
 
 func TestKeyShareVaultWrongPassword(t *testing.T) {
-	os.Setenv("LUX_MPC_PASSWORD", "password-alpha")
+	os.Setenv("MPC_PASSWORD", "password-alpha")
 	pw, _ := NewPasswordProvider("env", nil)
 	vault := NewKeyShareVault(pw, "")
 	ctx := context.Background()
@@ -156,7 +156,7 @@ func TestKeyShareVaultWrongPassword(t *testing.T) {
 	}
 
 	// Change password — decryption must fail
-	os.Setenv("LUX_MPC_PASSWORD", "password-beta")
+	os.Setenv("MPC_PASSWORD", "password-beta")
 	_, _, err := vault.Load(ctx, "test")
 	if err == nil {
 		t.Error("expected decryption failure with wrong password")
@@ -165,7 +165,7 @@ func TestKeyShareVaultWrongPassword(t *testing.T) {
 		t.Errorf("want ErrDecryptionFailed, got %v", err)
 	}
 
-	os.Unsetenv("LUX_MPC_PASSWORD")
+	os.Unsetenv("MPC_PASSWORD")
 }
 
 func TestKeyShareVaultDeleteList(t *testing.T) {
