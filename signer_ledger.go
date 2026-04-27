@@ -55,7 +55,10 @@ type LedgerConfig struct {
 	ToolPath string
 
 	// App identifies the Ledger app to address. Examples:
-	//   "ethereum"  → eth-sign-tx
+	//   "ethereum"  → eth-sign-tx (handles every EVM-compat chain:
+	//                 Lux C-Chain, Hanzo, Zoo, Pars; chain_id is in
+	//                 the EIP-155 RLP payload)
+	//   "lux"       → lux-sign-tx (Lux native P/X chain operations)
 	//   "bitcoin"   → btc-sign-psbt
 	//   "solana"    → sol-sign-tx
 	App string
@@ -65,8 +68,17 @@ type LedgerConfig struct {
 	SignAction string
 
 	// DerivationPath is the BIP-32 path of the key to sign with.
-	// Required. Format "m/44'/60'/0'/0/0".
+	// Required. Format "m/44'/60'/0'/0/0" for EVM, "m/44'/9000'/0'/0/0"
+	// for Lux native. Construct via github.com/luxfi/ledger.BIP44PathForName
+	// rather than formatting the string by hand.
 	DerivationPath string
+
+	// ChainID is the EIP-155 numeric chain id for EVM-compat signing
+	// (Lux C-Chain, Hanzo, Zoo, Pars). Optional — if non-zero, it is
+	// passed to ledgerctl via --chain-id so the device displays the
+	// correct numeric network identifier on the review screen.
+	// Ignored when App != "ethereum".
+	ChainID uint64
 }
 
 // LedgerSigner produces signatures via a Ledger device using ledgerctl.
@@ -111,6 +123,9 @@ func (s *LedgerSigner) Sign(ctx context.Context, _ string, message []byte) ([]by
 		"--input-format", "hex",
 		"--output-format", "hex",
 	}
+	if strings.EqualFold(s.cfg.App, "ethereum") && s.cfg.ChainID != 0 {
+		args = append(args, "--chain-id", fmt.Sprintf("%d", s.cfg.ChainID))
+	}
 	cmd := exec.CommandContext(ctx, tool, args...)
 	cmd.Stdin = strings.NewReader(hex.EncodeToString(message))
 	cmd.Stderr = os.Stderr
@@ -128,6 +143,47 @@ func (s *LedgerSigner) Sign(ctx context.Context, _ string, message []byte) ([]by
 		return nil, fmt.Errorf("hsm/ledger: decode signature: %w", err)
 	}
 	return sig, nil
+}
+
+// GetPubKey fetches the compressed secp256k1 public key for the
+// configured derivation path by invoking ledgerctl. Used by the
+// approval-provider verifier to pin the on-device pubkey at enrollment
+// time.
+//
+// The verb varies by app:
+//   ethereum → eth-get-pubkey
+//   lux      → lux-get-pubkey
+//   <other>  → {App}-get-pubkey
+//
+// Output is hex; we decode and return the raw bytes.
+func (s *LedgerSigner) GetPubKey(ctx context.Context) ([]byte, error) {
+	tool := s.cfg.ToolPath
+	if tool == "" {
+		tool = "ledgerctl"
+	}
+	if _, err := exec.LookPath(tool); err != nil {
+		return nil, fmt.Errorf("hsm/ledger: %s not found on PATH: %w", tool, err)
+	}
+	verb := s.cfg.App + "-get-pubkey"
+	cmd := exec.CommandContext(ctx, tool, verb,
+		"--path", s.cfg.DerivationPath,
+		"--output-format", "hex",
+	)
+	cmd.Stderr = os.Stderr
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("hsm/ledger: %s failed: %w", verb, err)
+	}
+	pkHex := strings.TrimSpace(out.String())
+	if pkHex == "" {
+		return nil, errors.New("hsm/ledger: empty pubkey returned")
+	}
+	pk, err := hex.DecodeString(pkHex)
+	if err != nil {
+		return nil, fmt.Errorf("hsm/ledger: decode pubkey: %w", err)
+	}
+	return pk, nil
 }
 
 // Verify is unsupported on the Ledger Signer. The device exposes no
