@@ -1,6 +1,8 @@
 package hsm
 
 import (
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -138,11 +140,105 @@ func NewSigner(providerType string, config map[string]string) (Signer, error) {
 	case "mldsa", "pq", "post-quantum":
 		return NewMLDSASigner(mldsa.MLDSA65), nil
 
+	case "kmip":
+		ts, _ := strconv.Atoi(get("timeout", "MPC_HSM_KMIP_TIMEOUT"))
+		return NewKMIPSigner(KMIPConfig{
+			Endpoint:               get("endpoint", "MPC_HSM_KMIP_ENDPOINT"),
+			CAFile:                 get("ca_file", "MPC_HSM_KMIP_CA_FILE"),
+			ClientCertFile:         get("client_cert", "MPC_HSM_KMIP_CLIENT_CERT"),
+			ClientKeyFile:          get("client_key", "MPC_HSM_KMIP_CLIENT_KEY"),
+			ServerName:             get("server_name", "MPC_HSM_KMIP_SERVER_NAME"),
+			UniqueIdentifier:       get("uid", "MPC_HSM_KMIP_UID"),
+			CryptographicAlgorithm: get("algorithm", "MPC_HSM_KMIP_ALGORITHM"),
+			HashingAlgorithm:       get("hash", "MPC_HSM_KMIP_HASH"),
+			TimeoutSeconds:         ts,
+		})
+
+	case "tr31":
+		// TR-31 KBPK is sourced from configuration as hex bytes. Production
+		// deployments MUST inject the KBPK via a KMS provider — never via
+		// a plaintext config file. The config-based path here exists for
+		// dev/test and for operators who derive the KBPK out-of-band.
+		kbpkHex := get("kbpk_hex", "MPC_HSM_TR31_KBPK_HEX")
+		if kbpkHex == "" {
+			return nil, errors.New("hsm: tr31 requires kbpk_hex (or MPC_HSM_TR31_KBPK_HEX) — 32-byte KBPK in hex")
+		}
+		kbpk, err := hex.DecodeString(kbpkHex)
+		if err != nil {
+			return nil, fmt.Errorf("hsm: tr31 kbpk_hex decode: %w", err)
+		}
+		return NewTR31Signer(kbpk)
+
 	case "local", "":
 		return NewLocalSigner(), nil
 
 	default:
-		return nil, fmt.Errorf("hsm: unknown signer provider %q (supported: aws, gcp, azure, zymbit, yubihsm, pkcs11, nitrokey, coldcard, foundation, keystone, ngrave, gridplus, ledger, trezor, mldsa, local)", providerType)
+		return nil, fmt.Errorf("hsm: unknown signer provider %q (supported: aws, gcp, azure, zymbit, yubihsm, pkcs11, nitrokey, coldcard, foundation, keystone, ngrave, gridplus, ledger, trezor, kmip, tr31, mldsa, local)", providerType)
+	}
+}
+
+// RequireFIPSProvider returns nil when providerType is a FIPS-validated
+// provider that may be used in deployments subject to FIPS 140-2 / 140-3
+// or FIPS 199 controls. It returns a descriptive error otherwise so
+// startup fails fast on misconfiguration in regulated environments.
+//
+// Validation policy (luxfi/hsm does NOT ship its own FIPS module — it
+// facilitates compliant use of third-party FIPS modules):
+//
+//   - aws       — AWS CloudHSM is FIPS 140-2 Level 3 validated
+//                 (CMVP cert #3380). AWS KMS is FIPS 140-2 Level 3 validated
+//                 (cert #4523) when configured to use FIPS endpoints.
+//   - gcp       — Google Cloud HSM uses Marvell LiquidSecurity HSMs that
+//                 are FIPS 140-2 Level 3 validated (cert #4399).
+//   - azure     — Azure Key Vault Premium / Managed HSM uses Marvell
+//                 LiquidSecurity (cert #4399); Azure Dedicated HSM uses
+//                 Thales Luna 7 (cert #4153, Level 3).
+//   - pkcs11    — PASS through; the validation depends entirely on the
+//                 vendor library configured. Operators MUST verify the
+//                 specific module/firmware version is on the active CMVP
+//                 list. luxfi/hsm cannot enforce this remotely.
+//   - kmip      — same as pkcs11 — depends on the KMS server's CMVP cert.
+//   - yubihsm   — YubiHSM 2 is FIPS 140-2 Level 3 validated (cert #4148)
+//                 when running FIPS firmware (5.x.x-FIPS).
+//   - nitrokey  — Nitrokey HSM 2 holds Common Criteria EAL4+ (cert
+//                 BSI-DSZ-CC-1148) but is NOT FIPS 140 validated. It is
+//                 REJECTED by RequireFIPSProvider.
+//   - zymbit    — Zymbit SCM is NOT FIPS 140 validated. REJECTED.
+//   - mldsa, local, tr31 — pure-software implementations. REJECTED.
+//   - coldcard, foundation, keystone, ngrave, ledger, trezor, gridplus —
+//                 personal hardware wallets, not FIPS validated. REJECTED
+//                 unless the deployment is FIPS-exempt (e.g., custody
+//                 ceremonies under a separate compliance regime).
+//
+// Callers wire RequireFIPSProvider before constructing the Signer:
+//
+//	if cfg.FIPSRequired {
+//	    if err := hsm.RequireFIPSProvider(cfg.SignerProvider); err != nil {
+//	        return fmt.Errorf("startup: %w", err)
+//	    }
+//	}
+//	signer, err := hsm.NewSigner(cfg.SignerProvider, cfg.SignerConfig)
+func RequireFIPSProvider(providerType string) error {
+	p := strings.TrimSpace(strings.ToLower(providerType))
+	switch p {
+	case "aws", "gcp", "azure", "yubihsm", "yubico", "yubi", "pkcs11", "kmip":
+		return nil
+	case "":
+		return errors.New("hsm/fips: provider not specified — FIPS deployments must explicitly select a validated provider")
+	case "local":
+		return errors.New("hsm/fips: local signer is not FIPS-validated (in-memory ECDSA, dev-only)")
+	case "mldsa", "pq", "post-quantum":
+		return errors.New("hsm/fips: cloudflare/circl ML-DSA is not yet on the CMVP active list (FIPS 204 module validation in progress)")
+	case "tr31":
+		return errors.New("hsm/fips: TR-31 signer is a key-block adapter — backing KBPK must come from a FIPS provider; configure provider=aws|gcp|azure|pkcs11|kmip|yubihsm and wrap with TR31Signer at the call site")
+	case "nitrokey":
+		return errors.New("hsm/fips: Nitrokey HSM 2 holds CC EAL4+ but is not FIPS 140-2/3 validated")
+	case "zymbit":
+		return errors.New("hsm/fips: Zymbit SCM is not FIPS 140-2/3 validated")
+	case "coldcard", "foundation", "keystone", "ngrave", "ledger", "trezor", "gridplus", "lattice":
+		return fmt.Errorf("hsm/fips: %s is a personal hardware wallet and is not FIPS 140-2/3 validated", p)
+	default:
+		return fmt.Errorf("hsm/fips: unknown provider %q — cannot assert FIPS compliance", providerType)
 	}
 }
 
