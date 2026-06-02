@@ -26,22 +26,26 @@ type mockKeyShare struct {
 	scheme               threshold.SchemeID
 }
 
-func (m *mockKeyShare) Index() int                       { return m.index }
-func (m *mockKeyShare) Threshold() int                   { return m.thresh }
-func (m *mockKeyShare) TotalParties() int                { return m.total }
-func (m *mockKeyShare) PublicShare() []byte               { return m.pub }
-func (m *mockKeyShare) Bytes() []byte                     { return m.data }
-func (m *mockKeyShare) SchemeID() threshold.SchemeID     { return m.scheme }
-func (m *mockKeyShare) GroupKey() threshold.PublicKey     { return &mockPublicKey{data: m.groupKeyData, scheme: m.scheme} }
+func (m *mockKeyShare) Index() int                   { return m.index }
+func (m *mockKeyShare) Threshold() int               { return m.thresh }
+func (m *mockKeyShare) TotalParties() int            { return m.total }
+func (m *mockKeyShare) PublicShare() []byte          { return m.pub }
+func (m *mockKeyShare) Bytes() []byte                { return m.data }
+func (m *mockKeyShare) SchemeID() threshold.SchemeID { return m.scheme }
+func (m *mockKeyShare) GroupKey() threshold.PublicKey {
+	return &mockPublicKey{data: m.groupKeyData, scheme: m.scheme}
+}
 
 type mockPublicKey struct {
 	data   []byte
 	scheme threshold.SchemeID
 }
 
-func (m *mockPublicKey) Bytes() []byte                        { return m.data }
-func (m *mockPublicKey) Equal(other threshold.PublicKey) bool { return string(m.data) == string(other.Bytes()) }
-func (m *mockPublicKey) SchemeID() threshold.SchemeID         { return m.scheme }
+func (m *mockPublicKey) Bytes() []byte { return m.data }
+func (m *mockPublicKey) Equal(other threshold.PublicKey) bool {
+	return string(m.data) == string(other.Bytes())
+}
+func (m *mockPublicKey) SchemeID() threshold.SchemeID { return m.scheme }
 
 type mockSignatureShare struct {
 	index  int
@@ -57,9 +61,9 @@ type mockThresholdSigner struct {
 	share *mockKeyShare
 }
 
-func (m *mockThresholdSigner) Index() int                           { return m.share.index }
-func (m *mockThresholdSigner) PublicShare() []byte                   { return m.share.pub }
-func (m *mockThresholdSigner) KeyShare() threshold.KeyShare         { return m.share }
+func (m *mockThresholdSigner) Index() int                   { return m.share.index }
+func (m *mockThresholdSigner) PublicShare() []byte          { return m.share.pub }
+func (m *mockThresholdSigner) KeyShare() threshold.KeyShare { return m.share }
 
 func (m *mockThresholdSigner) NonceGen(_ context.Context) (threshold.NonceCommitment, threshold.NonceState, error) {
 	return nil, nil, nil // BLS-style: non-interactive

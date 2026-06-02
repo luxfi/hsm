@@ -320,7 +320,7 @@ func mechanismFor(name string, message []byte) (*pkcs11.Mechanism, []byte, error
 }
 
 var (
-	errPKCS11NotBuilt      = errors.New("hsm/pkcs11: not reachable in CGO build")
-	errPKCS11NoPin         = errors.New("hsm/pkcs11: PIN not set (configure PKCS11Config.Pin or MPC_HSM_PKCS11_PIN env)")
+	errPKCS11NotBuilt       = errors.New("hsm/pkcs11: not reachable in CGO build")
+	errPKCS11NoPin          = errors.New("hsm/pkcs11: PIN not set (configure PKCS11Config.Pin or MPC_HSM_PKCS11_PIN env)")
 	errPKCS11VerifyNoPubkey = errors.New("hsm/pkcs11: no on-token public key — verify with caller-pinned key")
 )

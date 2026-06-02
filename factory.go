@@ -186,29 +186,29 @@ func NewSigner(providerType string, config map[string]string) (Signer, error) {
 // facilitates compliant use of third-party FIPS modules):
 //
 //   - aws       — AWS CloudHSM is FIPS 140-2 Level 3 validated
-//                 (CMVP cert #3380). AWS KMS is FIPS 140-2 Level 3 validated
-//                 (cert #4523) when configured to use FIPS endpoints.
+//     (CMVP cert #3380). AWS KMS is FIPS 140-2 Level 3 validated
+//     (cert #4523) when configured to use FIPS endpoints.
 //   - gcp       — Google Cloud HSM uses Marvell LiquidSecurity HSMs that
-//                 are FIPS 140-2 Level 3 validated (cert #4399).
+//     are FIPS 140-2 Level 3 validated (cert #4399).
 //   - azure     — Azure Key Vault Premium / Managed HSM uses Marvell
-//                 LiquidSecurity (cert #4399); Azure Dedicated HSM uses
-//                 Thales Luna 7 (cert #4153, Level 3).
+//     LiquidSecurity (cert #4399); Azure Dedicated HSM uses
+//     Thales Luna 7 (cert #4153, Level 3).
 //   - pkcs11    — PASS through; the validation depends entirely on the
-//                 vendor library configured. Operators MUST verify the
-//                 specific module/firmware version is on the active CMVP
-//                 list. luxfi/hsm cannot enforce this remotely.
+//     vendor library configured. Operators MUST verify the
+//     specific module/firmware version is on the active CMVP
+//     list. luxfi/hsm cannot enforce this remotely.
 //   - kmip      — same as pkcs11 — depends on the KMS server's CMVP cert.
 //   - yubihsm   — YubiHSM 2 is FIPS 140-2 Level 3 validated (cert #4148)
-//                 when running FIPS firmware (5.x.x-FIPS).
+//     when running FIPS firmware (5.x.x-FIPS).
 //   - nitrokey  — Nitrokey HSM 2 holds Common Criteria EAL4+ (cert
-//                 BSI-DSZ-CC-1148) but is NOT FIPS 140 validated. It is
-//                 REJECTED by RequireFIPSProvider.
+//     BSI-DSZ-CC-1148) but is NOT FIPS 140 validated. It is
+//     REJECTED by RequireFIPSProvider.
 //   - zymbit    — Zymbit SCM is NOT FIPS 140 validated. REJECTED.
 //   - mldsa, local, tr31 — pure-software implementations. REJECTED.
 //   - coldcard, foundation, keystone, ngrave, ledger, trezor, gridplus —
-//                 personal hardware wallets, not FIPS validated. REJECTED
-//                 unless the deployment is FIPS-exempt (e.g., custody
-//                 ceremonies under a separate compliance regime).
+//     personal hardware wallets, not FIPS validated. REJECTED
+//     unless the deployment is FIPS-exempt (e.g., custody
+//     ceremonies under a separate compliance regime).
 //
 // Callers wire RequireFIPSProvider before constructing the Signer:
 //

@@ -90,7 +90,7 @@ func (s *KeystoneSigner) Provider() string { return "keystone" }
 // UR-encoded by the caller (the signer is format-agnostic and refuses
 // to silently misinterpret raw bytes). The expected envelope shape is:
 //
-//   ur:<URType>/<bytewords>
+//	ur:<URType>/<bytewords>
 //
 // The response is expected to be a matching response UR (e.g.,
 // "ur:eth-signature/...") and is returned to the caller verbatim. The

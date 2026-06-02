@@ -9,11 +9,11 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"crypto/sha256"
-	"io"
-	"golang.org/x/crypto/hkdf"
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"golang.org/x/crypto/hkdf"
+	"io"
 	"sync"
 
 	"github.com/luxfi/crypto/threshold"
@@ -250,8 +250,8 @@ func NewAttestingSigner(inner threshold.Signer, hsm Signer, keyID string) *HSMAt
 }
 
 func (s *HSMAttestingSigner) Index() int                   { return s.inner.Index() }
-func (s *HSMAttestingSigner) PublicShare() []byte           { return s.inner.PublicShare() }
-func (s *HSMAttestingSigner) KeyShare() threshold.KeyShare  { return s.inner.KeyShare() }
+func (s *HSMAttestingSigner) PublicShare() []byte          { return s.inner.PublicShare() }
+func (s *HSMAttestingSigner) KeyShare() threshold.KeyShare { return s.inner.KeyShare() }
 
 // NonceGen delegates to the inner signer.
 // For schemes requiring nonce generation (FROST, CGGMP21), the nonces are
@@ -357,7 +357,7 @@ type ThresholdConfig struct {
 	// Signer provider for attestation.
 	SignerProvider string
 	SignerConfig   map[string]string
-	AttestKeyID   string
+	AttestKeyID    string
 }
 
 // ThresholdManager integrates HSM with threshold signing protocols.

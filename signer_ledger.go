@@ -151,9 +151,10 @@ func (s *LedgerSigner) Sign(ctx context.Context, _ string, message []byte) ([]by
 // time.
 //
 // The verb varies by app:
-//   ethereum → eth-get-pubkey
-//   lux      → lux-get-pubkey
-//   <other>  → {App}-get-pubkey
+//
+//	ethereum → eth-get-pubkey
+//	lux      → lux-get-pubkey
+//	<other>  → {App}-get-pubkey
 //
 // Output is hex; we decode and return the raw bytes.
 func (s *LedgerSigner) GetPubKey(ctx context.Context) ([]byte, error) {
