@@ -594,7 +594,7 @@ func TestKeyShareVaultMultiScheme(t *testing.T) {
 		{"bls-0", threshold.SchemeBLS, "bls-share"},
 		{"frost-0", threshold.SchemeFROST, "frost-share"},
 		{"cmp-0", threshold.SchemeCMP, "cmp-share"},
-		{"corona-0", threshold.SchemeCorona, "corona-share"},
+		{"Corona-0", threshold.SchemeCorona, "Corona-share"},
 	}
 
 	for _, s := range schemes {
