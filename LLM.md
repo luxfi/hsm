@@ -1,2 +1,2 @@
-# hsm — AI Assistant Context
+# hsm
 
